@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shooter-Spotter Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="login-form">
+        <h1>Enter the Game</h1>
+        <input type="text" id="player-name" placeholder="Enter your name">
+        <button id="login-button">Join Game</button>
+    </div>
+    <div id="game-area" style="display: none;">
+        <h2>Welcome, <span id="player-name-display"></span>!</h2>
+        <p>Your role: <span id="player-role"></span></p>
+        <p id="game-status">Waiting for game to start...</p>
+        <div id="counters">
+            <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
+            <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
+        </div>
+        <div id="game-grid"></div>
+        <div>----</div>
+        <button id="restart-button" style="display: none;">Restart Game</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>
+

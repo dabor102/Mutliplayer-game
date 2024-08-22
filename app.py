@@ -7,7 +7,7 @@ import logging
 import time
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = 'team_battle'
 socketio = SocketIO(app, async_mode='gevent', logger=True, engineio_logger=True)
 
 game_manager = GameManager()
