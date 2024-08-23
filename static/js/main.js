@@ -6,11 +6,10 @@ let timerInterval;
 let isFirstClick = true;
 let restartButton;
 
-console.log('main.js loaded');
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded and parsed');
     setupEventListeners();
+    requestGameConfig();
 });
 
 function setupEventListeners() {
@@ -27,6 +26,20 @@ function setupEventListeners() {
     } else {
         console.error('Restart button not found');
     }
+
+    socket.on('login_response', handleLoginResponse);
+    socket.on('waiting_message', handleWaitingMessage);
+    socket.on('game_start', handleGameStart);
+    socket.on('click_result', handleClickResult);
+    socket.on('turn_ended', handleTurnEnded);
+    socket.on('game_restarted', handleGameRestarted);
+    socket.on('level_completed', handleLevelCompleted);
+    socket.on('game_completed', handleGameCompleted);
+    socket.on('game_config', handleGameConfig);
+}
+
+function requestGameConfig() {
+    socket.emit('get_game_config');
 }
 
 function handleLogin() {
@@ -39,43 +52,109 @@ function handleLogin() {
     }
 }
 
-function handleRestartGame() {
-    console.log('Requesting game restart');
-    socket.emit('restart_game', { game_id: gameId });
-    updateGameStatus('Requesting game restart...', 'info');
+function handleLoginResponse(data) {
+    console.log('Received login response:', data);
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('game-area').style.display = 'block';
+    document.getElementById('player-name-display').textContent = document.getElementById('player-name').value;
+    document.getElementById('player-role').textContent = data.role;
+    myRole = data.role;
+    updateGameStatus('Waiting for game to start...', 'info');
+}
+
+function handleWaitingMessage(data) {
+    updateGameStatus(data.message, 'info');
+}
+
+function handleGameStart(data) {
+    console.log('Game started:', data);
+    gameId = data.game_id;
+    myRole = data.your_role;
+    document.getElementById('player-role').textContent = myRole;
+    updateGameStatus(`Game started! You are the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    
+    gameConfig = { ...gameConfig, ...data };
+    
+    resetGameState();
+    createGrid();
+    updateLevelDisplay(gameConfig.current_level);
+}
+
+function handleClickResult(data) {
+    console.log('Click result:', data);
+    updateGridFromState(data.grid_view);
+    remainingClicks = data.remaining_clicks;
+    remainingTime = data.remaining_time;
+    updateCounters();
+    
+    if (myRole === 'spotter' && isFirstClick) {
+        startTimer();
+        isFirstClick = false;
+    }
+}
+
+function handleTurnEnded(data) {
+    updateGameStatus(data.message, 'warning');
+    clearInterval(timerInterval);
+    showRestartButton();
+}
+
+function handleGameRestarted(data) {
+    console.log('Game restarted:', data);
+    gameConfig = { ...gameConfig, ...data };
+    myRole = data.your_role;
+    document.getElementById('player-role').textContent = myRole;
+    updateGameStatus(`Game restarted! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGridFromState(data.grid_view);
+    updateStatsDisplay(data.player_stats);
+    resetGameState();
+    createGrid();
+    updateLevelDisplay(data.current_level);
+    hideRestartButton();
+}
+
+function handleLevelCompleted(data) {
+    console.log('Level completed:', data);
+    updateGameStatus(data.message, 'success');
+    
+    gameConfig = { ...gameConfig, ...data };
+    
+    resetGameState();
+    createGrid();
+    updateLevelDisplay(data.next_level);
+    
+    setTimeout(() => {
+        updateGameStatus("New level started! Get ready to play!", 'info');
+    }, 3000);
+}
+
+function handleGameCompleted(data) {
+    console.log('Game completed:', data);
+    updateGameStatus(data.message, 'success');
+    disableClicks();
+    showRestartButton();
+}
+
+function handleGameConfig(config) {
+    console.log('Received game config:', config);
+    gameConfig = { ...gameConfig, ...config };
+    createGrid();
+    updateLevelDisplay(config.current_level);
 }
 
 function resetGameState() {
     isFirstClick = true;
     clearInterval(timerInterval);
-    remainingClicks = gameConfig.SHOOT_LIMIT;
-    remainingTime = gameConfig.TIME_LIMIT;
+    remainingClicks = gameConfig.click_limit;
+    remainingTime = gameConfig.time_limit;
     updateCounters();
 }
 
-function initializeGameMechanics() {
-    console.log('Initializing game mechanics for role:', myRole);
-    resetGameState();
-    if (myRole === 'shooter') {
-        updateGameStatus("Your turn to shoot!", 'info');
-    } else {
-        updateGameStatus("Wait for the shooter to make a move.", 'info');
-    }
-}
-
 function createGrid() {
-    if (!gameConfig.GRID_SIZE) {
-        console.error('Grid size not set, cannot create grid');
-        return;
-    }
     const grid = document.getElementById('game-grid');
-    if (!grid) {
-        console.error('Game grid element not found');
-        return;
-    }
     grid.innerHTML = '';
-    for (let y = 0; y < gameConfig.GRID_SIZE; y++) {
-        for (let x = 0; x < gameConfig.GRID_SIZE; x++) {
+    for (let y = 0; y < gameConfig.grid_size; y++) {
+        for (let x = 0; x < gameConfig.grid_size; x++) {
             const cell = document.createElement('div');
             cell.classList.add('grid-cell');
             cell.dataset.x = x;
@@ -85,8 +164,7 @@ function createGrid() {
             grid.appendChild(cell);
         }
     }
-    grid.style.gridTemplateColumns = `repeat(${gameConfig.GRID_SIZE}, 30px)`;
-    console.log('Grid created with', gameConfig.GRID_SIZE * gameConfig.GRID_SIZE, 'cells');
+    grid.style.gridTemplateColumns = `repeat(${gameConfig.grid_size}, 30px)`;
 }
 
 function handleCellClick(event) {
@@ -104,7 +182,6 @@ function handleCellClick(event) {
     }
     
     socket.emit('click', { game_id: gameId, x: x, y: y });
-    // Don't update remainingClicks here, wait for server response
 }
 
 function startTimer() {
@@ -118,6 +195,21 @@ function startTimer() {
             showRestartButton();
         }
     }, 100);
+}
+
+function updateGridFromState(gridView) {
+    const cells = document.querySelectorAll('.grid-cell');
+    cells.forEach((cell, index) => {
+        const x = index % gameConfig.grid_size;
+        const y = Math.floor(index / gameConfig.grid_size);
+        cell.className = 'grid-cell';
+        if (myRole === 'shooter') {
+            if (gridView[y][x] === 1) cell.classList.add('attempted');
+        } else if (myRole === 'spotter') {
+            if (gridView[y][x] === 2) cell.classList.add('hit');
+            else if (gridView[y][x] === 3) cell.classList.add('miss');
+        }
+    });
 }
 
 function updateGameStatus(message, type = 'info') {
@@ -142,38 +234,29 @@ function updateCounters() {
     }
 }
 
-function updateGridFromState(gridView) {
-    const grid = document.getElementById('game-grid');
-    if (!grid) {
-        console.error('Game grid element not found');
-        return;
+function updateLevelDisplay(level) {
+    const levelDisplay = document.getElementById('current-level');
+    if (levelDisplay) {
+        levelDisplay.textContent = `Level: ${level}`;
+    } else {
+        console.error('Level display element not found');
     }
-    for (let y = 0; y < gameConfig.GRID_SIZE; y++) {
-        for (let x = 0; x < gameConfig.GRID_SIZE; x++) {
-            const cell = grid.querySelector(`[data-x="${x}"][data-y="${y}"]`);
-            if (cell) {
-                cell.className = 'grid-cell';
-                if (myRole === 'shooter') {
-                    if (gridView[y][x] === 1) cell.classList.add('attempted');
-                } else if (myRole === 'spotter') {
-                    if (gridView[y][x] === 2) cell.classList.add('hit');
-                    else if (gridView[y][x] === 3) cell.classList.add('miss');
-                }
-            }
-        }
-    }
-    console.log('Grid updated for role:', myRole);
 }
 
-    // Function to update the stats display
-    function updateStatsDisplay(stats) {
-        document.getElementById('turns-played').textContent = stats.turns_played || 0;
-        document.getElementById('total-hits').textContent = stats.total_hits || 0;
-        document.getElementById('total-misses').textContent = stats.total_misses || 0;
-        document.getElementById('total-clicks').textContent = stats.total_clicks || 0;
-        document.getElementById('player-stats').style.display = 'block';
-    }
+function updateStatsDisplay(stats) {
+    document.getElementById('turns-played').textContent = stats.turns_played || 0;
+    document.getElementById('total-hits').textContent = stats.total_hits || 0;
+    document.getElementById('total-misses').textContent = stats.total_misses || 0;
+    document.getElementById('total-clicks').textContent = stats.total_clicks || 0;
+    document.getElementById('player-stats').style.display = 'block';
+}
 
+function disableClicks() {
+    const cells = document.querySelectorAll('.grid-cell');
+    cells.forEach(cell => {
+        cell.removeEventListener('click', handleCellClick);
+    });
+}
 
 function showRestartButton() {
     if (restartButton) {
@@ -187,104 +270,8 @@ function hideRestartButton() {
     }
 }
 
-// Socket event listeners
-
-socket.on('connect', () => {
-    console.log('Connected to server');
-    socket.emit('get_game_config');
-});
-
-socket.on('game_config', (config) => {
-    console.log('Received game config:', config);
-    gameConfig = {
-        GRID_SIZE: config.grid_size,
-        TIME_LIMIT: config.time_limit,
-        SHOOT_LIMIT: config.shoot_limit,
-        ROUNDS: config.rounds
-    };
-    createGrid();
-});
-
-socket.on('login_response', (data) => {
-    console.log('Received login response:', data);
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('game-area').style.display = 'block';
-    document.getElementById('player-name-display').textContent = document.getElementById('player-name').value;
-    document.getElementById('player-role').textContent = data.role;
-    myRole = data.role;
-    updateGameStatus('Waiting for game to start...', 'info');
-});
-
-socket.on('waiting_message', (data) => {
-    updateGameStatus(data.message, 'info');
-});
-
-socket.on('game_start', (data) => {
-    console.log('Game started:', data);
-    gameId = data.game_id;
-    myRole = data.your_role;
-    document.getElementById('player-role').textContent = myRole;
-    document.getElementById('player-stats').style.display = 'none';
-    updateGameStatus(`Game started! You are the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
-    initializeGameMechanics();
-});
-
-socket.on('game_restarted', (data) => {
-    console.log('Game restarted:', data);
-    gameId = data.game_id;
-    myRole = data.your_role;
-    document.getElementById('player-role').textContent = myRole;
-    document.getElementById('player-stats').style.display = 'none';
-    updateGameStatus(`Game restarted! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
-    updateGridFromState(data.grid_view);
-    // Update stats display
-    if (data.player_stats) {
-        updateStatsDisplay(data.player_stats);
-    }
-    initializeGameMechanics();
-    hideRestartButton();
-
-    
-});
-
-socket.on('click_result', (data) => {
-    console.log('Click result:', data);
-    updateGridFromState(data.grid_view);
-    remainingClicks = data.remaining_clicks;
-    remainingTime = data.remaining_time;
-    updateCounters();
-    
-    if (myRole === 'spotter' && isFirstClick) {
-        startTimer();
-        isFirstClick = false;
-    }
-
-    
-    // *let message;
-    // if (myRole === 'shooter') {
-    //    message = `You clicked (${data.x}, ${data.y}). Waiting for spotter feedback.`;
-    //} else {
-    //    message = data.hit ? `Hit at (${data.x}, ${data.y})!` : `Miss at (${data.x}, ${data.y}).`;
-    //}
-    // 
-    // updateGameStatus(data.hit ? 'success' : 'info'); // include message/ define in *let message;
-    
-    if (remainingClicks === 0 || remainingTime <= 0) {
-        clearInterval(timerInterval);
-        updateGameStatus("Turn ended. Waiting for game to restart.", 'warning');
-        showRestartButton();
-    }
-});
-
-socket.on('clear_grid', function() {
-    // Clear all cell classes
-    const cells = document.querySelectorAll('.grid-cell');
-    cells.forEach(cell => {
-        cell.className = 'grid-cell';
-    });
-    
-    // Reset any other UI elements that show results
-    document.getElementById('remaining-clicks').textContent = '15';
-    document.getElementById('remaining-time').textContent = '15.0';
-    // Add any other UI resets here
-});
+function handleRestartGame() {
+    console.log('Requesting game restart');
+    socket.emit('restart_game', { game_id: gameId });
+    updateGameStatus('Requesting game restart...', 'info');
+}

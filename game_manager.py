@@ -3,12 +3,25 @@ from grid import Grid
 from config import GameConfig
 import time
 import random
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 class GameManager:
     def __init__(self):
         self.players = {}
         self.waiting_player = None
         self.games = {}
+        self.current_level = 1  # Initialize with level 1
+
+        # Validate the configuration when the GameManager is initialized
+        try:
+            GameConfig.validate_config()
+        except ValueError as e:
+            logger.error(f"Configuration error: {e}")
+            raise
 
     def add_player(self, name, session_id):
         if self.waiting_player:
@@ -31,16 +44,33 @@ class GameManager:
 
     def create_game(self, player1, player2):
         game_id = f"{player1.id}_{player2.id}"
+        level_config = GameConfig.get_level_config(self.current_level)
+        logger.info(f"Loading level {self.current_level}")
+        print(f"Loading level {self.current_level}")  # Console output for level loading
+
         self.games[game_id] = {
-            'grid': Grid(GameConfig.GRID_SIZE, GameConfig.NUM_OBJECTS, GameConfig.OBJECT_SIZE),
+            'grid': Grid(level_config['grid_size'], level_config['num_objects'], level_config['object_shapes']),
             'players': [player1, player2],
             'clicks': 0,
             'start_time': None,
-            'shooter_view': [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)],
-            'spotter_view': [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)],
-            'consecutive_hits': 0  # New field to track consecutive hits
+            'shooter_view': [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])],
+            'spotter_view': [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])],
+            'consecutive_hits': 0,
+            'level': self.current_level,
+            'time_limit': level_config['time_limit'],
+            'click_limit': level_config['click_limit']
         }
         return game_id
+
+    def set_level(self, level):
+        if 1 <= level <= len(GameConfig.LEVELS):
+            self.current_level = level
+            logger.info(f"Current level set to {self.current_level}")
+            print(f"Current level set to {self.current_level}")  # Console output for level setting
+        else:
+            raise ValueError(f"Invalid level: {level}. Must be between 1 and {len(GameConfig.LEVELS)}")
+    
+
 
     def click(self, game_id, x, y):
         game = self.games[game_id]
@@ -59,16 +89,30 @@ class GameManager:
         else:
             game['consecutive_hits'] = 0  # Reset consecutive hits on miss
         
-        return result, game['start_time']
+        # Check if level is completed
+        level_completed = game['grid'].all_objects_destroyed() if result else False
+        
+        return result, game['start_time'], level_completed
+
+    def advance_to_next_level(self, game_id):
+        self.current_level += 1
+        if self.current_level <= len(GameConfig.LEVELS):
+            self.start_turn(game_id)
+            return True
+        else:
+            # Game completed
+            self.current_level = 1  # Reset to first level
+            return False
 
     def start_turn(self, game_id):
         game = self.games[game_id]
+        level_config = GameConfig.get_level_config(self.current_level)
         game['clicks'] = 0
         game['start_time'] = time.time()
-        game['grid'] = Grid(GameConfig.GRID_SIZE, GameConfig.NUM_OBJECTS, GameConfig.OBJECT_SIZE)
-        game['shooter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
-        game['spotter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
-        game['consecutive_hits'] = 0  # Reset consecutive hits at the start of each turn
+        game['grid'] = Grid(level_config['grid_size'], level_config['num_objects'], level_config['object_shapes'])
+        game['shooter_view'] = [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])]
+        game['spotter_view'] = [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])]
+        game['consecutive_hits'] = 0
  
 
  
