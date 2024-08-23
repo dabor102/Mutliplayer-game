@@ -165,6 +165,15 @@ function updateGridFromState(gridView) {
     console.log('Grid updated for role:', myRole);
 }
 
+    // Function to update the stats display
+    function updateStatsDisplay(stats) {
+        document.getElementById('turns-played').textContent = stats.turns_played || 0;
+        document.getElementById('total-hits').textContent = stats.total_hits || 0;
+        document.getElementById('total-misses').textContent = stats.total_misses || 0;
+        document.getElementById('total-clicks').textContent = stats.total_clicks || 0;
+        document.getElementById('player-stats').style.display = 'block';
+    }
+
 
 function showRestartButton() {
     if (restartButton) {
@@ -215,6 +224,7 @@ socket.on('game_start', (data) => {
     gameId = data.game_id;
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
+    document.getElementById('player-stats').style.display = 'none';
     updateGameStatus(`Game started! You are the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
     initializeGameMechanics();
 });
@@ -224,10 +234,17 @@ socket.on('game_restarted', (data) => {
     gameId = data.game_id;
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
+    document.getElementById('player-stats').style.display = 'none';
     updateGameStatus(`Game restarted! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
     updateGridFromState(data.grid_view);
+    // Update stats display
+    if (data.player_stats) {
+        updateStatsDisplay(data.player_stats);
+    }
     initializeGameMechanics();
     hideRestartButton();
+
+    
 });
 
 socket.on('click_result', (data) => {
@@ -241,6 +258,7 @@ socket.on('click_result', (data) => {
         startTimer();
         isFirstClick = false;
     }
+
     
     // *let message;
     // if (myRole === 'shooter') {
@@ -256,4 +274,17 @@ socket.on('click_result', (data) => {
         updateGameStatus("Turn ended. Waiting for game to restart.", 'warning');
         showRestartButton();
     }
+});
+
+socket.on('clear_grid', function() {
+    // Clear all cell classes
+    const cells = document.querySelectorAll('.grid-cell');
+    cells.forEach(cell => {
+        cell.className = 'grid-cell';
+    });
+    
+    // Reset any other UI elements that show results
+    document.getElementById('remaining-clicks').textContent = '15';
+    document.getElementById('remaining-time').textContent = '15.0';
+    // Add any other UI resets here
 });

@@ -25,6 +25,15 @@
         <div>----</div>
         <button id="restart-button" style="display: none;">Restart Game</button>
     </div>
+    <!-- Add this after the game grid and restart button -->
+    <div id="player-stats" style="display: none;">
+        <h3>Your Stats</h3>
+        <p>Turns Played: <span id="turns-played"></span></p>
+        <p>Total Hits: <span id="total-hits"></span></p>
+        <p>Total Misses: <span id="total-misses"></span></p>
+        <p>Total Clicks: <span id="total-clicks"></span></p>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 

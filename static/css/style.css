@@ -75,3 +75,18 @@ body {
     font-weight: bold;
     color: #3498db;
 }
+
+#player-stats {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+#player-stats h3 {
+    margin-top: 0;
+}
+
+#player-stats p {
+    margin: 5px 0;
+}

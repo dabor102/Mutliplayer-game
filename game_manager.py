@@ -34,12 +34,11 @@ class GameManager:
         self.games[game_id] = {
             'grid': Grid(GameConfig.GRID_SIZE, GameConfig.NUM_OBJECTS, GameConfig.OBJECT_SIZE),
             'players': [player1, player2],
-            #'current_player': 0,
             'clicks': 0,
             'start_time': None,
-            'round': 1,
             'shooter_view': [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)],
-            'spotter_view': [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
+            'spotter_view': [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)],
+            'consecutive_hits': 0  # New field to track consecutive hits
         }
         return game_id
 
@@ -50,8 +49,17 @@ class GameManager:
         
         game['shooter_view'][y][x] = 1  # 1 for attempted
         game['spotter_view'][y][x] = 2 if result else 3  # 2 for hit, 3 for miss
+
+        # Update consecutive hits and adjust time if necessary
+        if result:
+            game['consecutive_hits'] += 1
+            if game['consecutive_hits'] == 2:
+                game['start_time'] += 1  # Add 1 second to the timer
+                game['consecutive_hits'] = 0  # Reset consecutive hits
+        else:
+            game['consecutive_hits'] = 0  # Reset consecutive hits on miss
         
-        return result
+        return result, game['start_time']
 
     def start_turn(self, game_id):
         game = self.games[game_id]
@@ -60,6 +68,8 @@ class GameManager:
         game['grid'] = Grid(GameConfig.GRID_SIZE, GameConfig.NUM_OBJECTS, GameConfig.OBJECT_SIZE)
         game['shooter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
         game['spotter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
+        game['consecutive_hits'] = 0  # Reset consecutive hits at the start of each turn
+ 
 
  
     def get_player_view(self, game_id, role):

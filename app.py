@@ -55,10 +55,11 @@ def handle_click(data):
     game_id = data['game_id']
     x, y = data['x'], data['y']
     game = game_manager.games[game_id]
-    result = game_manager.click(game_id, x, y)
+    result, updated_start_time = game_manager.click(game_id, x, y)
     
     remaining_clicks = GameConfig.SHOOT_LIMIT - game['clicks']
-    remaining_time = max(0, GameConfig.TIME_LIMIT - (time.time() - game['start_time']))
+    remaining_time = max(0, GameConfig.TIME_LIMIT - (time.time() - updated_start_time))
+
     
     click_result = {
         'x': x,
@@ -70,14 +71,35 @@ def handle_click(data):
     
     game['shooter_view'][y][x] = 1  # 1 for attempted
     game['spotter_view'][y][x] = 2 if result else 3  # 2 for hit, 3 for miss
+
+   
+        
     
     for player in game['players']:
         emit('click_result', {
             **click_result,
             'grid_view': game['shooter_view'] if player.role == 'shooter' else game['spotter_view']
         }, room=player.id)
+
+    # Check if time bonus was awarded
+    if updated_start_time != game['start_time']:
+        bonus_time = updated_start_time - game['start_time']
+        emit('time_bonus', {'bonus_time': bonus_time}, room=game_id)
+        logger.debug(f"Time bonus awarded: {bonus_time} seconds")
+
+   # Update the clicking player's (shooter's) stats
+    player = game_manager.players[request.sid]
+    player.update_stats(result)
+    
+    # Include updated stats in the click_result
+    click_result['player_stats'] = player.get_stats()
+
+    logger.debug(f"Stats updated for player {player.name}: {player.get_stats()}")
     
     logger.debug(f"Click result sent: {click_result}")
+
+
+
 
 @socketio.on('get_game_config')
 def handle_get_game_config():
@@ -97,14 +119,19 @@ def handle_restart_game(data):
     if not game:
         logger.error(f"Game not found: {game_id}")
         return
-    
+
+    # Increment turns played for both players
+    for player in game['players']:
+        player.increment_turns()
+
+
+    # Swap roles
     game['players'][0].role, game['players'][1].role = game['players'][1].role, game['players'][0].role
     
+     # Reset game state
     game['grid'] = Grid(GameConfig.GRID_SIZE, GameConfig.NUM_OBJECTS, GameConfig.OBJECT_SIZE)
-    # game['current_player'] = 0
     game['clicks'] = 0
     game['start_time'] = time.time()
-    #game['round'] = 1
     game['shooter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
     game['spotter_view'] = [[0 for _ in range(GameConfig.GRID_SIZE)] for _ in range(GameConfig.GRID_SIZE)]
     
@@ -114,7 +141,8 @@ def handle_restart_game(data):
             'your_role': player.role,
             'teammate': player.teammate.name,
             'teammate_role': player.teammate.role,
-            'grid_view': game['shooter_view'] if player.role == 'shooter' else game['spotter_view']
+            'grid_view': game['shooter_view'] if player.role == 'shooter' else game['spotter_view'],
+            'player_stats': player.get_stats()  # Include player stats here
         }, room=player.id)
     
     logger.info(f"Game restarted: {game_id}")
