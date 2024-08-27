@@ -3,41 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alien Battleship Hunters</title>
+    <title>Alien Battleships Hunters</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div id="login-form">
-        <h1>Welcome to Alien Battleships Hunters</h1>
-        <h2>Enter your name</h2>
-        <input type="text" id="player-name" placeholder="Enter your name">
-        <button id="login-button">Join Game</button>
-    </div>
-    <div id="game-area" style="display: none;">
-        <h2>Welcome, <span id="player-name-display"></span>!</h2>
-        <p>Your role: <span id="player-role"></span></p>
-        <p id="game-status">Waiting for game to start...</p>
-        <div id="counters">
-            <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
-            <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
+    <h1>Welcome to Alien Battleships Hunters</h1>
+    <input type="text" id="player-name" placeholder="Enter your name">
+    <button id="login-button">Join Game</button>
+</div>
+
+<div id="game-container" style="display: none;">
+    <div id="objective-display" class="console-display">
+        <div class="console-header">
+            <span class="console-title">Mission Control</span>
+            <div class="console-controls">
+                <span class="control-button"></span>
+                <span class="control-button"></span>
+                <span class="control-button"></span>
+            </div>
         </div>
-        <div id="game-grid"></div>
-        <div>----</div>
-        <button id="restart-button" style="display: none;">Restart Game</button>
-    </div>
-    <!-- Add this after the game grid and restart button -->
-    <div id="current-level" style="display: none;"></div>
-    <div id="player-stats" style="display: none;">
-        <h3>Your Stats</h3>
-        <p>Turns Played: <span id="turns-played"></span></p>
-        <p>Total Hits: <span id="total-hits"></span></p>
-        <p>Total Misses: <span id="total-misses"></span></p>
-        <p>Total Clicks: <span id="total-clicks"></span></p>
+
+        <div class="console-content">
+            <div class="console-section welcome-section">
+                Welcome, <span id="player-name-display"></span>!
+                <p>Your role: <span id="player-role"></span></p>
+            </div>
+
+            <div id="game-status" class="console-section status-section">
+            </div>
+
+            <div class="console-section objective-section" style="display: none;">
+                <p>Mission: Destroy <span id="num-objects"></span> object(s)</p>
+                <p>Target Shapes:</p>
+                <div id="shape-display"></div>
+            </div>
+
+            <div class="console-section counters-section" style="display: none;">
+                <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
+                <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
+                <p>Current Level: <span id="current-level">1</span></p>
+            </div>
+        </div>
     </div>
 
+    <div id="game-play-area" style="display: none;">
+        <div id="game-grid" class="game-grid"></div>
+
+        <div class="game-info">
+            <div id="player-stats">
+                <h3>Your Stats</h3>
+                <p>Turns Played: <span id="turns-played">0</span></p>
+                <p>Total Hits: <span id="total-hits">0</span></p>
+                <p>Total Misses: <span id="total-misses">0</span></p>
+                <p>Total Clicks: <span id="total-clicks">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <button id="next-button" style="display: none;">Next Round</button>
+</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
+    <script src="static/js/main.js"></script>
 </body>
 </html>
-

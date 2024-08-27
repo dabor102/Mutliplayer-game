@@ -48,7 +48,10 @@ def handle_login(data):
                 'grid_size': level_config['grid_size'],
                 'time_limit': level_config['time_limit'],
                 'click_limit': level_config['click_limit'],
-                'current_level': game_manager.current_level
+                'current_level': game_manager.current_level,
+                'object_shapes': list(level_config['object_shapes'].keys()),
+                'shape_ascii': level_config['shape_ascii'],  # Send ASCII representations
+                'num_objects': level_config['num_objects']
             }, room=p.id)
     else:
         emit('waiting_message', {'message': 'Waiting for a teammate...'}, room=request.sid)
@@ -59,8 +62,8 @@ def handle_click(data):
     game_id = data['game_id']
     x, y = data['x'], data['y']
     game = game_manager.games[game_id]
-    result, updated_start_time, level_completed = game_manager.click(game_id, x, y)
-    
+    result, updated_start_time, all_destroyed = game_manager.click(game_id, x, y)
+
     level_config = GameConfig.get_level_config(game_manager.current_level)
     remaining_clicks = max(0, level_config['click_limit'] - game['clicks'])
     remaining_time = max(0, level_config['time_limit'] - (time.time() - updated_start_time))
@@ -70,43 +73,21 @@ def handle_click(data):
         'y': y,
         'hit': result,
         'remaining_clicks': remaining_clicks,
-        'remaining_time': round(remaining_time, 1)
+        'remaining_time': round(remaining_time, 1),
+        'all_destroyed': all_destroyed
     }
-    
+
     for player in game['players']:
         emit('click_result', {
             **click_result,
             'grid_view': game['shooter_view'] if player.role == 'shooter' else game['spotter_view']
         }, room=player.id)
 
-    # Update the clicking player's (shooter's) stats
     player = game_manager.players[request.sid]
     player.update_stats(result)
-    
-    # Include updated stats in the click_result
     click_result['player_stats'] = player.get_stats()
 
     logger.debug(f"Click result sent: {click_result}")
-
-    # Check if the turn should end
-    if remaining_clicks == 0 or remaining_time <= 0:
-        emit('turn_ended', {'message': 'Turn ended. Waiting for game to restart.'}, room=game_id)
-
-   # Check if the level is completed
-    if level_completed:
-        if game_manager.advance_to_next_level(game_id):
-            new_level_config = GameConfig.get_level_config(game_manager.current_level)
-            emit('level_completed', {
-                'message': f'Level {game_manager.current_level - 1} completed! Moving to level {game_manager.current_level}.',
-                'next_level': game_manager.current_level,
-                'grid_size': new_level_config['grid_size'],
-                'time_limit': new_level_config['time_limit'],
-                'click_limit': new_level_config['click_limit']
-            }, room=game_id)
-        else:
-            emit('game_completed', {'message': 'Congratulations! You\'ve completed all levels!'}, room=game_id)
-    elif remaining_clicks == 0 or remaining_time <= 0:
-        emit('turn_ended', {'message': 'Turn ended. Waiting for game to restart.'}, room=game_id)
 
 
 @socketio.on('get_game_config')
@@ -116,33 +97,38 @@ def handle_get_game_config():
         'grid_size': level_config['grid_size'],
         'time_limit': level_config['time_limit'],
         'click_limit': level_config['click_limit'],
-        'current_level': game_manager.current_level
+        'current_level': game_manager.current_level,
+        'object_shapes': list(level_config['object_shapes'].keys()),
+        'shape_ascii': level_config['shape_ascii'],  # Send ASCII representations
+        'num_objects': level_config['num_objects']
     })
 
-@socketio.on('restart_game')
-def handle_restart_game(data):
-    logger.info(f"Restart game request received: {data}")
+@socketio.on('next_turn')
+def handle_next_turn(data):
+    logger.info(f"Next turn request received: {data}")
     game_id = data['game_id']
+    reason = data['reason']
     game = game_manager.games.get(game_id)
-    
+
     if not game:
         logger.error(f"Game not found: {game_id}")
         return
 
-    # Increment turns played for both players
     for player in game['players']:
         player.increment_turns()
 
-    # Swap roles
+    #swap player
     game['players'][0].role, game['players'][1].role = game['players'][1].role, game['players'][0].role
-    
-    # Reset game state
-    game_manager.start_turn(game_id)
-    
+
+    if reason == 'level_completed':
+        game_manager.advance_to_next_level(game_id)
+    else:
+        game_manager.start_turn(game_id)
+
     level_config = GameConfig.get_level_config(game_manager.current_level)
-    
+
     for player in game['players']:
-        emit('game_restarted', {
+        emit('next_turn', {
             'game_id': game_id,
             'your_role': player.role,
             'teammate': player.teammate.name,
@@ -152,10 +138,13 @@ def handle_restart_game(data):
             'grid_size': level_config['grid_size'],
             'time_limit': level_config['time_limit'],
             'click_limit': level_config['click_limit'],
-            'current_level': game_manager.current_level
+            'current_level': game_manager.current_level,
+            'object_shapes': list(level_config['object_shapes'].keys()),
+            'shape_ascii': level_config['shape_ascii'],  # Send ASCII representations
+            'num_objects': level_config['num_objects']
         }, room=player.id)
-    
-    logger.info(f"Game restarted: {game_id}")
+
+    logger.info(f"Next turn: {game_id}")
 
 if __name__ == '__main__':
     logger.debug("Starting SocketIO app")

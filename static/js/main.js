@@ -4,7 +4,6 @@ let gameConfig = {};
 let remainingClicks, remainingTime;
 let timerInterval;
 let isFirstClick = true;
-let restartButton;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded and parsed');
@@ -19,21 +18,12 @@ function setupEventListeners() {
     } else {
         console.error('Login button not found');
     }
-    
-    restartButton = document.getElementById('restart-button');
-    if (restartButton) {
-        restartButton.addEventListener('click', handleRestartGame);
-    } else {
-        console.error('Restart button not found');
-    }
 
     socket.on('login_response', handleLoginResponse);
     socket.on('waiting_message', handleWaitingMessage);
     socket.on('game_start', handleGameStart);
     socket.on('click_result', handleClickResult);
-    socket.on('turn_ended', handleTurnEnded);
-    socket.on('game_restarted', handleGameRestarted);
-    socket.on('level_completed', handleLevelCompleted);
+    socket.on('next_turn', handleNextTurn);
     socket.on('game_completed', handleGameCompleted);
     socket.on('game_config', handleGameConfig);
 }
@@ -53,9 +43,8 @@ function handleLogin() {
 }
 
 function handleLoginResponse(data) {
-    console.log('Received login response:', data);
     document.getElementById('login-form').style.display = 'none';
-    document.getElementById('game-area').style.display = 'block';
+    document.getElementById('game-container').style.display = 'block';
     document.getElementById('player-name-display').textContent = document.getElementById('player-name').value;
     document.getElementById('player-role').textContent = data.role;
     myRole = data.role;
@@ -72,12 +61,19 @@ function handleGameStart(data) {
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
     updateGameStatus(`Game started! You are the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
-    
+
     gameConfig = { ...gameConfig, ...data };
-    
+    updateObjectiveDisplay(gameConfig.object_shapes, gameConfig.shape_ascii, gameConfig.num_objects);
+
+    // Show the rest of the UI
+    document.querySelector('.objective-section').style.display = 'block';
+    document.querySelector('.counters-section').style.display = 'block';
+    document.getElementById('game-play-area').style.display = 'block';
+
     resetGameState();
     createGrid();
     updateLevelDisplay(gameConfig.current_level);
+    enableClicks();
 }
 
 function handleClickResult(data) {
@@ -86,58 +82,72 @@ function handleClickResult(data) {
     remainingClicks = data.remaining_clicks;
     remainingTime = data.remaining_time;
     updateCounters();
-    
+
     if (myRole === 'spotter' && isFirstClick) {
         startTimer();
         isFirstClick = false;
     }
+
+    if (data.all_destroyed) {
+        clearInterval(timerInterval);
+        disableClicks();
+        updateGameStatus("All objects destroyed! Click 'Next Level' to advance.", 'success');
+        showNextButton('Next Level');
+    } else {
+        checkRemainingClicks();
+        checkTimeUp();
+    }
 }
 
-function handleTurnEnded(data) {
-    updateGameStatus(data.message, 'warning');
-    clearInterval(timerInterval);
-    showRestartButton();
-}
 
-function handleGameRestarted(data) {
-    console.log('Game restarted:', data);
+function handleNextTurn(data) {
+    console.log('Next turn started:', data);
     gameConfig = { ...gameConfig, ...data };
+    updateObjectiveDisplay(gameConfig.object_shapes, gameConfig.shape_ascii, gameConfig.num_objects);
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
-    updateGameStatus(`Game restarted! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGameStatus(`Next turn! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    
+    // Check if the level has changed, indicating level completion
+    if (data.current_level > gameConfig.current_level) {
+        statusMessage = `Level Completed! ${statusMessage}`;
+    }
+
     updateGridFromState(data.grid_view);
     updateStatsDisplay(data.player_stats);
     resetGameState();
     createGrid();
     updateLevelDisplay(data.current_level);
-    hideRestartButton();
+    enableClicks();
+    const nextButton = document.getElementById('next-button');
+    nextButton.style.display = 'none';
 }
 
 function handleLevelCompleted(data) {
     console.log('Level completed:', data);
-    updateGameStatus(data.message, 'success');
-    
     gameConfig = { ...gameConfig, ...data };
-    
+    myRole = data.your_role;
+    document.getElementById('player-role').textContent = myRole;
+    updateGameStatus(`Level Completed - all objects destroyed! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGridFromState(data.grid_view);
+    updateStatsDisplay(data.player_stats);
     resetGameState();
     createGrid();
-    updateLevelDisplay(data.next_level);
-    
-    setTimeout(() => {
-        updateGameStatus("New level started! Get ready to play!", 'info');
-    }, 3000);
+    updateLevelDisplay(data.current_level);
 }
+    
 
 function handleGameCompleted(data) {
     console.log('Game completed:', data);
     updateGameStatus(data.message, 'success');
     disableClicks();
-    showRestartButton();
+    showNextButton();
 }
 
 function handleGameConfig(config) {
     console.log('Received game config:', config);
     gameConfig = { ...gameConfig, ...config };
+    updateObjectiveDisplay(config.object_shapes, config.shape_ascii, config.num_objects);
     createGrid();
     updateLevelDisplay(config.current_level);
 }
@@ -148,6 +158,7 @@ function resetGameState() {
     remainingClicks = gameConfig.click_limit;
     remainingTime = gameConfig.time_limit;
     updateCounters();
+    enableClicks();
 }
 
 function createGrid() {
@@ -168,10 +179,17 @@ function createGrid() {
 }
 
 function handleCellClick(event) {
-    if (myRole !== 'shooter' || remainingClicks === 0 || remainingTime <= 0) {
-        console.log('Click ignored:', myRole, remainingClicks, remainingTime);
+    if (myRole !== 'shooter') {
+        console.log('Click ignored:', myRole);
         return;
     }
+
+    const cell = event.target;
+    if (cell.classList.contains('hit') || cell.classList.contains('miss')) {
+        console.log('Cell already clicked');
+        return;
+    }
+
     const x = parseInt(event.target.dataset.x);
     const y = parseInt(event.target.dataset.y);
     console.log(`Clicked cell: (${x}, ${y})`);
@@ -184,18 +202,43 @@ function handleCellClick(event) {
     socket.emit('click', { game_id: gameId, x: x, y: y });
 }
 
+
+function checkTimeUp() {
+    if (remainingTime <= 0) {
+        endGame('time_up');
+    }
+}
+
+function checkRemainingClicks() {
+    if (remainingClicks === 0) {
+        endGame('no_clicks');
+    }
+}
+
 function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         remainingTime = Math.max(0, remainingTime - 0.1);
         updateCounters();
-        if (remainingTime <= 0) {
-            clearInterval(timerInterval);
-            updateGameStatus("Time's up! Waiting for game to restart.", 'warning');
-            showRestartButton();
-        }
     }, 100);
 }
+
+
+function endGame(reason) {
+    clearInterval(timerInterval);
+    disableClicks();
+
+    let message;
+    if (reason === 'time_up') {
+        message = "Time's up! Click 'Next Turn' to continue.";
+    } else if (reason === 'no_clicks') {
+        message = "No more clicks remaining! Click 'Next Turn' to continue.";
+    }
+
+    updateGameStatus(message, 'warning');
+    showNextButton('Next Turn');
+}
+
 
 function updateGridFromState(gridView) {
     const cells = document.querySelectorAll('.grid-cell');
@@ -213,11 +256,10 @@ function updateGridFromState(gridView) {
 }
 
 function updateGameStatus(message, type = 'info') {
-    console.log('Updating game status:', message);
     const statusElement = document.getElementById('game-status');
     if (statusElement) {
         statusElement.textContent = message;
-        statusElement.className = `status-${type}`;
+        statusElement.className = `console-section status-section status-${type}`;
     } else {
         console.error('Game status element not found');
     }
@@ -226,9 +268,11 @@ function updateGameStatus(message, type = 'info') {
 function updateCounters() {
     const remainingClicksElement = document.getElementById('remaining-clicks');
     const remainingTimeElement = document.getElementById('remaining-time');
-    if (remainingClicksElement && remainingTimeElement) {
+    const currentLevelElement = document.getElementById('current-level');
+    if (remainingClicksElement && remainingTimeElement && currentLevelElement) {
         remainingClicksElement.textContent = remainingClicks;
         remainingTimeElement.textContent = remainingTime.toFixed(1);
+        currentLevelElement.textContent = gameConfig.current_level;
     } else {
         console.error('Counter elements not found');
     }
@@ -240,6 +284,26 @@ function updateLevelDisplay(level) {
         levelDisplay.textContent = `Level: ${level}`;
     } else {
         console.error('Level display element not found');
+    }
+}
+
+function updateObjectiveDisplay(shapes, shapeAscii, numObjects) {
+    const objectiveElement = document.getElementById('objective-display');
+    if (objectiveElement) {
+        document.getElementById('num-objects').textContent = numObjects;
+
+        const shapeDisplay = document.getElementById('shape-display');
+        shapeDisplay.innerHTML = '';
+
+        shapes.forEach(shape => {
+            const shapeItem = document.createElement('div');
+            shapeItem.className = 'shape-item';
+            shapeItem.innerHTML = `
+                <div>${shape}</div>
+                <pre>${shapeAscii[shape]}</pre>
+            `;
+            shapeDisplay.appendChild(shapeItem);
+        });
     }
 }
 
@@ -258,20 +322,20 @@ function disableClicks() {
     });
 }
 
-function showRestartButton() {
-    if (restartButton) {
-        restartButton.style.display = 'block';
+function enableClicks() {
+    if (myRole === 'shooter') {
+        const cells = document.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+            cell.addEventListener('click', handleCellClick);
+        });
     }
 }
 
-function hideRestartButton() {
-    if (restartButton) {
-        restartButton.style.display = 'none';
-    }
-}
-
-function handleRestartGame() {
-    console.log('Requesting game restart');
-    socket.emit('restart_game', { game_id: gameId });
-    updateGameStatus('Requesting game restart...', 'info');
+function showNextButton(text) {
+    const nextButton = document.getElementById('next-button');
+    nextButton.textContent = text;
+    nextButton.style.display = 'block';
+    nextButton.onclick = () => {
+        socket.emit('next_turn', { game_id: gameId, reason: text === 'Next Level' ? 'level_completed' : 'turn_ended' });        
+    };
 }

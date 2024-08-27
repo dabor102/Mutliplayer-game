@@ -74,6 +74,12 @@ class GameManager:
 
     def click(self, game_id, x, y):
         game = self.games[game_id]
+        
+        # Check if the cell has already been clicked
+        if game['shooter_view'][y][x] != 0 or game['spotter_view'][y][x] != 0:
+            return False, game['start_time'], False  # Cell already clicked, no change
+
+
         result = game['grid'].click(x, y)
         game['clicks'] += 1
         
@@ -91,7 +97,7 @@ class GameManager:
         
         # Check if level is completed
         level_completed = game['grid'].all_objects_destroyed() if result else False
-        
+
         return result, game['start_time'], level_completed
 
     def advance_to_next_level(self, game_id):

@@ -1,4 +1,9 @@
 import random
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 class Grid:
     def __init__(self, size, num_objects, object_shapes):
@@ -38,6 +43,7 @@ class Grid:
 
     def all_objects_destroyed(self):
         destroyed_cells = sum(row.count(2) for row in self.grid)
+        logger.info(f"ALL OBJECTS DESTROYED")
         return destroyed_cells == self.total_object_cells
 
     def is_completed(self):

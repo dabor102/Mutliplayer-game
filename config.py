@@ -6,30 +6,38 @@ class GameConfig:
         'X_shape': [(0, 1), (1, 0), (1, 2), (2, 1), (1, 1)],
     }
 
+    SHAPE_ASCII = {
+        'single': '■',
+        'T_shape': ' ▄▄▄\n  █  ',
+        'square_3x3': '███\n███\n███',
+        'X_shape': '█ █\n █ \n█ █'
+    }
+
+
     LEVELS = [
         {
             "level": 1,
             "grid_size": 10,
             "num_objects": 1,
-            "object_shapes": ['single','square_3x3'],
+            "object_shapes": ['square_3x3'],
             "time_limit": 20,
             "click_limit": 20
         },
         {
             "level": 2,
-            "grid_size": 12,
-            "num_objects": 3,
-            "object_shapes": ['T_shape', 'X_shape'],
-            "time_limit": 25,
-            "click_limit": 25
+            "grid_size": 10,
+            "num_objects": 2,
+            "object_shapes": ['square_3x3'],
+            "time_limit": 20,
+            "click_limit": 20
         },
         {
             "level": 3,
-            "grid_size": 15,
-            "num_objects": 4,
+            "grid_size": 12,
+            "num_objects": 2,
             "object_shapes": ['square_3x3', 'X_shape'],
-            "time_limit": 30,
-            "click_limit": 30
+            "time_limit": 25,
+            "click_limit": 22
         }
     ]
 
@@ -39,13 +47,13 @@ class GameConfig:
             if level_config['level'] == level:
                 # Create a copy of the level config to avoid modifying the original
                 config = level_config.copy()
-                
                 # Convert shape names to actual shape coordinates
                 try:
                     config['object_shapes'] = {shape: cls.OBJECT_SHAPES[shape] for shape in config['object_shapes']}
+                    # Add ASCII representations separately
+                    config['shape_ascii'] = {shape: cls.SHAPE_ASCII[shape] for shape in config['object_shapes']}
                 except KeyError as e:
                     raise ValueError(f"Invalid shape name in level {level} configuration: {e}")
-                
                 return config
         raise ValueError(f"Level {level} configuration not found")
 

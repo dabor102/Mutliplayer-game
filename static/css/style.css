@@ -12,6 +12,100 @@ body {
     text-align: center;
 }
 
+/*Console start */
+.console-display {
+    background-color: #0A0A0A;  /* Darker background */
+    color: #33FF33;  /* Slightly darker, less bright green */
+    font-family: 'Courier New', monospace;
+    border: 1px solid #33FF33;  /* Thinner border */
+    border-radius: 5px;
+    padding: 8px;  /* Reduced padding */
+    margin-bottom: 15px;
+    box-shadow: 0 0 5px rgba(51, 255, 51, 0.3);  /* Softer glow */
+    font-size: 0.9em;  /* Smaller font size */
+    line-height: 1.2;  /* Reduced line height */
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #33FF33;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+}
+
+.console-title {
+    font-weight: bold;
+    font-size: 1em;  /* Slightly larger than content text */
+}
+
+.console-controls {
+    display: flex;
+}
+
+.control-button {
+    width: 8px;  /* Smaller buttons */
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 4px;
+    background-color: #33FF33;
+}
+
+.console-content {
+    height: auto;  /* Let it adjust to content */
+    max-height: 300px;  /* Maximum height */
+    overflow-y: auto;
+}
+
+.console-section {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dotted #33FF33;
+}
+
+
+.console-section:last-child {
+    border-bottom: none;
+}
+
+.console-line {
+    margin: 3px 0;  /* Reduced margin between lines */
+}
+
+.welcome-section {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+#shape-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;  /* Reduced gap */
+}
+
+.shape-item {
+    background-color: #001100;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+.shape-item pre {
+    margin: 0;
+    font-size: 0.8em;  /* Even smaller font for ASCII art */
+}
+/*Console end*/
+
+/* Add this if you want a blinking cursor effect */
+.console-content::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
 #game-grid {
     display: inline-grid;
     gap: 1px;
