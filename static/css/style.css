@@ -1,3 +1,59 @@
+/* Space background container */
+.space-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+}
+
+
+/* Star layers */
+.stars, .stars2, .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: starMove linear infinite;
+}
+
+.stars {
+    background-image: radial-gradient(2px 2px at calc(20px + var(--offset-x) * 1px) calc(30px + var(--offset-y) * 1px), #eee, rgba(0,0,0,0)),
+                      radial-gradient(2px 2px at calc(40px + var(--offset-x) * 2px) calc(70px + var(--offset-y) * 2px), #fff, rgba(0,0,0,0)),
+                      radial-gradient(1px 1px at calc(90px + var(--offset-x) * 3px) calc(40px + var(--offset-y) * 3px), #fff, rgba(0,0,0,0));
+    background-size: 200px 200px;
+    animation-duration: calc(30s + var(--offset-x) * 0.2s);
+}
+
+.stars2 {
+    background-image: radial-gradient(1px 1px at calc(10px + var(--offset-x) * 1px) calc(10px + var(--offset-y) * 1px), #eee, rgba(0,0,0,0)),
+                      radial-gradient(1px 1px at calc(150px + var(--offset-x) * 2px) calc(150px + var(--offset-y) * 2px), #fff, rgba(0,0,0,0)),
+                      radial-gradient(1px 1px at calc(60px + var(--offset-x) * 3px) calc(170px + var(--offset-y) * 3px), #fff, rgba(0,0,0,0));
+    background-size: 250px 250px;
+    animation-duration: calc(60s + var(--offset-y) * 0.2s);
+    filter: blur(1px);
+}
+
+.stars3 {
+    background-image: radial-gradient(1px 1px at calc(50px + var(--offset-x) * 1px) calc(80px + var(--offset-y) * 1px), #eee, rgba(0,0,0,0)),
+                      radial-gradient(1px 1px at calc(100px + var(--offset-x) * 2px) calc(50px + var(--offset-y) * 2px), #fff, rgba(0,0,0,0)),
+                      radial-gradient(1px 1px at calc(150px + var(--offset-x) * 3px) calc(120px + var(--offset-y) * 3px), #fff, rgba(0,0,0,0));
+    background-size: 300px 300px;
+    animation-duration: calc(90s + var(--offset-x) * 0.2s);
+    filter: blur(2px);
+}
+
+@keyframes starMove {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(200px);
+    }
+}
 :root {
     --main-bg-color: #3A3C5E;
     --text-color: #F2EA0D;
@@ -20,17 +76,21 @@ body, html {
     align-items: center;
 }
 
+
+
+
 /* Login form styles */
 #login-form {
     text-align: center;
     background-color: var(--main-bg-color);
-    padding: 2rem;
-    border-radius: var(--border-radius);
+    padding: 5rem;
+    border-radius: 150px;
     background-color: rgba(255, 255, 255, .15);
     backdrop-filter: blur(5px);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     max-width: 400px;
     width: 90%;
+    z-index: 2;
 }
 
 #login-form h1 {
@@ -72,18 +132,23 @@ body, html {
 /* Game container layout */
 #game-container {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    grid-template-rows: auto 1fr auto auto auto;
-    gap: var(--spacing);
     height: 75vh;
     width: 75vw;
+    min-height: 600px; /* Minimum height to ensure visibility of all elements */
+    min-width: 800px; /* Minimum width to maintain layout */
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-rows: auto 1fr auto auto auto;
+    gap: 0.5rem;
     padding: 10px;
     box-sizing: border-box;
-    /*border: 2px solid var(--border-color);*/
     border-radius: var(--border-radius);
     background-color: rgba(255, 255, 255, .15);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(5px);
+    z-index: 2;
+    font-size: calc(0.5em + 0.5vw); /* Slightly reduce base font size */
+    transform: scale(0.95); /* Slightly scale down the entire container */
+    transform-origin: center center;
 }
 
 /* Console styles */
@@ -152,13 +217,14 @@ body, html {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 25px;
     border-radius: var(--border-radius);
+
 }
 
 .grid-cell {
     aspect-ratio: 1;
     background-color: var(--main-bg-color);
     color: var(--main-bg-color);
-    border: 1px solid rgba(37, 117, 252, 1);
+    border: 1px;
     border-radius: var(--border-radius);
     display: flex;
     justify-content: center;
@@ -177,13 +243,14 @@ body, html {
 }
 
 .grid-cell.hit {
-    background-color: #F20D88;
-    box-shadow: 0 0 10px #F20D88;
+    background-color: #FF3B58;
+    box-shadow: 0 0 10px #FF3B58;
 }
 
 .grid-cell.miss {
-    background-color: #0D15F2;
-    box-shadow: 0 0 10px #0D15F2;
+    background-color: #3B58FF;
+    color: var(--text-color);
+    box-shadow: 0 0 10px #3B58FF;
 }
 
 /* Player Stats styles */
@@ -208,15 +275,7 @@ body, html {
 }
 
 /* Game Status styles */
-#game-status-message {
-    grid-column: 2;
-    grid-row: 3;
-    font-size: 11pt;
- 
-    text-align: center;
-    
-    border-radius: var(--border-radius);
-}
+
 
 /* Next Button styles */
 #next-button {
@@ -256,15 +315,16 @@ body, html {
 
 /* Status message styles */
 .status-info {
-    color: var(--text-color);
+    font-size: 8pt: 
+    color: #FFE23B;
 }
 
 .status-success {
-    color: rgba(37, 117, 252, 1);
+    color: #3BFF80;
 }
 
 .status-warning {
-    color: #ffd700;
+    color: #FF3BBA;
 }
 
 /* Responsive design adjustments */

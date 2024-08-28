@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class GameManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.players = {}
         self.waiting_player = None
         self.games = {}
-        self.current_level = 3  # Initialize with level 1
+        self.current_level = 1  # Initialize with level 1
 
         # Validate the configuration when the GameManager is initialized
         try:

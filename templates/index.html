@@ -3,17 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alien Battleships Hunters</title>
+    <title>Space Grids Tournament</title>
     <link rel="stylesheet" href="static/css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
 </head>
-<body>
+<body>  
+
+    <div class="space-background">
+        <div class="stars" style="--offset-x: 37; --offset-y: 53;"></div>
+        <div class="stars" style="--offset-x: 67; --offset-y: 89;"></div>
+        <div class="stars" style="--offset-x: 101; --offset-y: 131;"></div>
+        <div class="stars2" style="--offset-x: 7; --offset-y: 31;"></div>
+        <div class="stars2" style="--offset-x: 233; --offset-y: 47;"></div>  
+        <div class="stars3" style="--offset-x: 59; --offset-y: 333;"></div>
+        <div class="stars3" style="--offset-x: 0; --offset-y: 55;"></div>
+
+    </div>
+
     <div id="login-form">
-        <h1>Welcome to Alien Battleships Hunters</h1>
+        <h1>Space Grids Tournament</h1>
+        <p>... TEAM BUILDING GAME ...</p>
         <form id="login-form-element">
             <input type="text" id="player-name" placeholder="Enter your name" required>
             <button type="submit" id="join-game">Join Game</button>
         </form>
+
     </div>
 
     <div id="game-container" style="display: none;">
@@ -26,10 +40,13 @@
                     <span class="control-button"></span>
                 </div>
             </div>
-            <div class="console-content"></div>
+            <div class="console-content">
+                 <div id="game-status-message"></div>
+            </div>
         </div>
 
         <div class="mission-objective">
+
             <h2>Mission Objective</h2>
             <p>Welcome, <span id="player-name-display"></span>!</p>
             <p>Your role: <span id="player-role"></span></p>
@@ -61,7 +78,7 @@
             <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
         </div>
 
-        <div id="game-status-message"></div>
+       
 
         <button id="next-button" style="display: none;">Next Turn</button>
     </div>
