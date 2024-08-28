@@ -4,66 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alien Battleships Hunters</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
 </head>
 <body>
     <div id="login-form">
-    <h1>Welcome to Alien Battleships Hunters</h1>
-    <input type="text" id="player-name" placeholder="Enter your name">
-    <button id="login-button">Join Game</button>
-</div>
+        <h1>Welcome to Alien Battleships Hunters</h1>
+        <form id="login-form-element">
+            <input type="text" id="player-name" placeholder="Enter your name" required>
+            <button type="submit" id="join-game">Join Game</button>
+        </form>
+    </div>
 
-<div id="game-container" style="display: none;">
-    <div id="objective-display" class="console-display">
-        <div class="console-header">
-            <span class="console-title">Mission Control</span>
-            <div class="console-controls">
-                <span class="control-button"></span>
-                <span class="control-button"></span>
-                <span class="control-button"></span>
+    <div id="game-container" style="display: none;">
+        <div class="console">
+            <div class="console-header">
+                <span class="console-title">Mission Control</span>
+                <div class="console-controls">
+                    <span class="control-button"></span>
+                    <span class="control-button"></span>
+                    <span class="control-button"></span>
+                </div>
             </div>
+            <div class="console-content"></div>
         </div>
 
-        <div class="console-content">
-            <div class="console-section welcome-section">
-                Welcome, <span id="player-name-display"></span>!
-                <p>Your role: <span id="player-role"></span></p>
-            </div>
-
-            <div id="game-status" class="console-section status-section">
-            </div>
-
-            <div class="console-section objective-section" style="display: none;">
-                <p>Mission: Destroy <span id="num-objects"></span> object(s)</p>
-                <p>Target Shapes:</p>
-                <div id="shape-display"></div>
-            </div>
-
-            <div class="console-section counters-section" style="display: none;">
-                <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
-                <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
+        <div class="mission-objective">
+            <h2>Mission Objective</h2>
+            <p>Welcome, <span id="player-name-display"></span>!</p>
+            <p>Your role: <span id="player-role"></span></p>
+            
+            <div id="objective-section">
                 <p>Current Level: <span id="current-level">1</span></p>
+                <p>Mission: Destroy <span id="num-objects"></span> object(s)</p>
+                <h3>Target Shapes:</h3>
+                <div id="objective-display">
+                    <div id="shape-display"></div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="game-play-area" style="display: none;">
-        <div id="game-grid" class="game-grid"></div>
-
-        <div class="game-info">
-            <div id="player-stats">
-                <h3>Your Stats</h3>
-                <p>Turns Played: <span id="turns-played">0</span></p>
-                <p>Total Hits: <span id="total-hits">0</span></p>
-                <p>Total Misses: <span id="total-misses">0</span></p>
-                <p>Total Clicks: <span id="total-clicks">0</span></p>
-            </div>
+        <div class="grid">
+            <div id="game-grid"></div>
         </div>
-    </div>
 
-    <button id="next-button" style="display: none;">Next Round</button>
-</div>
+        <div id="player-stats">
+            <h2>Player Stats</h2>
+            <p>Turns Played: <span id="turns-played">0</span></p>
+            <p>Total Hits: <span id="total-hits">0</span></p>
+            <p>Total Misses: <span id="total-misses">0</span></p>
+            <p>Total Clicks: <span id="total-clicks">0</span></p>
+        </div>
+
+        <div class="game-counters">
+            <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
+            <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
+        </div>
+
+        <div id="game-status-message"></div>
+
+        <button id="next-button" style="display: none;">Next Turn</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="static/js/main.js"></script>
-</body>
-</html>

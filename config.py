@@ -9,7 +9,7 @@ class GameConfig:
     SHAPE_ASCII = {
         'single': '■',
         'T_shape': ' ▄▄▄\n  █  ',
-        'square_3x3': '███\n███\n███',
+        'square_3x3': '█ █ █\n█ █ █\n█ █ █',
         'X_shape': '█ █\n █ \n█ █'
     }
 

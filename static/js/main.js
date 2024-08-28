@@ -12,11 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    const loginButton = document.getElementById('login-button');
-    if (loginButton) {
-        loginButton.addEventListener('click', handleLogin);
+    const loginForm = document.getElementById('login-form-element');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
     } else {
-        console.error('Login button not found');
+        console.error('Login form not found');
     }
 
     socket.on('login_response', handleLoginResponse);
@@ -32,7 +32,8 @@ function requestGameConfig() {
     socket.emit('get_game_config');
 }
 
-function handleLogin() {
+function handleLogin(event) {
+    event.preventDefault(); // Prevent form submission
     const playerName = document.getElementById('player-name').value;
     if (playerName) {
         console.log('Sending login event:', playerName);
@@ -44,7 +45,10 @@ function handleLogin() {
 
 function handleLoginResponse(data) {
     document.getElementById('login-form').style.display = 'none';
-    document.getElementById('game-container').style.display = 'block';
+    document.getElementById('game-container').style.display = 'grid'; // Changed to 'grid'
+    document.getElementById('game-grid').style.display = 'none';
+    document.getElementById('objective-section').style.display = 'none';
+    document.getElementById('player-stats').style.display = 'none';
     document.getElementById('player-name-display').textContent = document.getElementById('player-name').value;
     document.getElementById('player-role').textContent = data.role;
     myRole = data.role;
@@ -56,19 +60,20 @@ function handleWaitingMessage(data) {
 }
 
 function handleGameStart(data) {
+    document.getElementById('game-grid').style.display = 'grid';
+    document.getElementById('objective-section').style.display = 'block';
+    document.getElementById('player-stats').style.display = 'block';
     console.log('Game started:', data);
     gameId = data.game_id;
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
-    updateGameStatus(`Game started! You are the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGameStatus(`Game started!`, 'success');
 
     gameConfig = { ...gameConfig, ...data };
     updateObjectiveDisplay(gameConfig.object_shapes, gameConfig.shape_ascii, gameConfig.num_objects);
 
-    // Show the rest of the UI
-    document.querySelector('.objective-section').style.display = 'block';
-    document.querySelector('.counters-section').style.display = 'block';
-    document.getElementById('game-play-area').style.display = 'block';
+    // Show the grid
+    document.querySelector('.grid').style.display = 'block';
 
     resetGameState();
     createGrid();
@@ -106,7 +111,7 @@ function handleNextTurn(data) {
     updateObjectiveDisplay(gameConfig.object_shapes, gameConfig.shape_ascii, gameConfig.num_objects);
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
-    updateGameStatus(`Next turn! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGameStatus(`Next turn! Roles swapped`, 'success');
     
     // Check if the level has changed, indicating level completion
     if (data.current_level > gameConfig.current_level) {
@@ -128,7 +133,7 @@ function handleLevelCompleted(data) {
     gameConfig = { ...gameConfig, ...data };
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
-    updateGameStatus(`Level Completed - all objects destroyed! You are now the ${myRole}. Your teammate (${data.teammate_role}) is ${data.teammate}.`, 'success');
+    updateGameStatus(`Level Completed - all objects destroyed!`, 'success');
     updateGridFromState(data.grid_view);
     updateStatsDisplay(data.player_stats);
     resetGameState();
@@ -175,7 +180,8 @@ function createGrid() {
             grid.appendChild(cell);
         }
     }
-    grid.style.gridTemplateColumns = `repeat(${gameConfig.grid_size}, 30px)`;
+    // Remove the fixed size and let CSS handle the grid layout
+    grid.style.gridTemplateColumns = `repeat(${gameConfig.grid_size}, 1fr)`;
 }
 
 function handleCellClick(event) {
@@ -256,23 +262,21 @@ function updateGridFromState(gridView) {
 }
 
 function updateGameStatus(message, type = 'info') {
-    const statusElement = document.getElementById('game-status');
+    const statusElement = document.getElementById('game-status-message');
     if (statusElement) {
         statusElement.textContent = message;
-        statusElement.className = `console-section status-section status-${type}`;
+        statusElement.className = `status-${type}`;
     } else {
-        console.error('Game status element not found');
+        console.error('Game status message element not found');
     }
 }
 
 function updateCounters() {
     const remainingClicksElement = document.getElementById('remaining-clicks');
     const remainingTimeElement = document.getElementById('remaining-time');
-    const currentLevelElement = document.getElementById('current-level');
-    if (remainingClicksElement && remainingTimeElement && currentLevelElement) {
+    if (remainingClicksElement && remainingTimeElement) {
         remainingClicksElement.textContent = remainingClicks;
         remainingTimeElement.textContent = remainingTime.toFixed(1);
-        currentLevelElement.textContent = gameConfig.current_level;
     } else {
         console.error('Counter elements not found');
     }
@@ -312,7 +316,10 @@ function updateStatsDisplay(stats) {
     document.getElementById('total-hits').textContent = stats.total_hits || 0;
     document.getElementById('total-misses').textContent = stats.total_misses || 0;
     document.getElementById('total-clicks').textContent = stats.total_clicks || 0;
-    document.getElementById('player-stats').style.display = 'block';
+    const playerStatsElement = document.querySelector('.player-stats');
+    if (playerStatsElement) {
+        playerStatsElement.style.display = 'block';
+    }
 }
 
 function disableClicks() {

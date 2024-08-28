@@ -14,7 +14,7 @@ class GameManager:
         self.players = {}
         self.waiting_player = None
         self.games = {}
-        self.current_level = 1  # Initialize with level 1
+        self.current_level = 3  # Initialize with level 1
 
         # Validate the configuration when the GameManager is initialized
         try:
@@ -75,6 +75,11 @@ class GameManager:
     def click(self, game_id, x, y):
         game = self.games[game_id]
         
+        
+        # Set start time on first click
+        if game['start_time'] is None:
+            game['start_time'] = time.time()
+
         # Check if the cell has already been clicked
         if game['shooter_view'][y][x] != 0 or game['spotter_view'][y][x] != 0:
             return False, game['start_time'], False  # Cell already clicked, no change
@@ -114,7 +119,7 @@ class GameManager:
         game = self.games[game_id]
         level_config = GameConfig.get_level_config(self.current_level)
         game['clicks'] = 0
-        game['start_time'] = time.time()
+        game['start_time'] = None 
         game['grid'] = Grid(level_config['grid_size'], level_config['num_objects'], level_config['object_shapes'])
         game['shooter_view'] = [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])]
         game['spotter_view'] = [[0 for _ in range(level_config['grid_size'])] for _ in range(level_config['grid_size'])]
