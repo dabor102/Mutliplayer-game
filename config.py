@@ -3,7 +3,7 @@ class GameConfig:
         'single': [(0, 0)],
         'T_shape': [(0, 0), (0, 1), (0, 2), (1, 1)],
         'square_3x3': [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)],
-        'X_shape': [(0, 1), (1, 0), (1, 2), (2, 1), (1, 1)],
+        'X_shape': [(0, 1), (1, 0), (1, 2), (2, 1), (1, 1)]
     }
 
     SHAPE_ASCII = {
@@ -29,15 +29,31 @@ class GameConfig:
             "num_objects": 2,
             "object_shapes": ['square_3x3'],
             "time_limit": 20,
-            "click_limit": 20
+            "click_limit": 30
         },
         {
             "level": 3,
-            "grid_size": 12,
+            "grid_size": 10,
             "num_objects": 2,
             "object_shapes": ['square_3x3', 'X_shape'],
             "time_limit": 25,
-            "click_limit": 22
+            "click_limit": 30
+        },
+        {
+            "level": 4,
+            "grid_size": 10,
+            "num_objects": 3,
+            "object_shapes": ['square_3x3', 'X_shape', 'T_shape'],
+            "time_limit": 25,
+            "click_limit": 30
+        },
+        {
+            "level": 5,
+            "grid_size": 10,
+            "num_objects": 3,
+            "object_shapes": ['T_shape'],
+            "time_limit": 25,
+            "click_limit": 30
         }
     ]
 

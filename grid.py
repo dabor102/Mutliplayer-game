@@ -9,20 +9,10 @@ class Grid:
     def __init__(self, size, num_objects, object_shapes):
         self.size = size
         self.grid = [[0 for _ in range(size)] for _ in range(size)]
+        self.total_object_cells = 0
+        self.objects = []  # List to store object locations and their shapes
+        self.destroyed_objects = set()  # Keep track of which objects have been fully destroyed
         self.place_objects(num_objects, object_shapes)
-        self.total_object_cells = sum(len(shape) for shape in object_shapes.values()) * num_objects
-
-    def place_objects(self, num_objects, object_shapes):
-        shape_names = list(object_shapes.keys())  # Get a list of shape names
-        for _ in range(num_objects):
-            shape_name = random.choice(shape_names)  # Choose a random shape name
-            shape = object_shapes[shape_name]  # Get the actual shape coordinates
-            while True:
-                x = random.randint(0, self.size - max(coord[0] for coord in shape) - 1)
-                y = random.randint(0, self.size - max(coord[1] for coord in shape) - 1)
-                if self.can_place_object(x, y, shape):
-                    self.place_object(x, y, shape)
-                    break
 
     def can_place_object(self, x, y, shape):
         for dx, dy in shape:
@@ -35,16 +25,57 @@ class Grid:
         for dx, dy in shape:
             self.grid[y + dy][x + dx] = 1
 
+    def place_objects(self, num_objects, object_shapes):
+        shape_names = list(object_shapes.keys())
+        logger.debug(f"Available shapes: {shape_names}")
+        logger.debug(f"Number of objects to place: {num_objects}")
+        logger.debug(f"Object shapes dictionary: {object_shapes}")
+        
+        for i in range(num_objects):
+            shape_name = random.choice(shape_names)
+            shape = object_shapes[shape_name]
+            logger.debug(f"Placing object {i+1}: {shape_name}")
+            logger.debug(f"Shape coordinates: {shape}")
+            
+            while True:
+                x = random.randint(0, self.size - max(coord[0] for coord in shape) - 1)
+                y = random.randint(0, self.size - max(coord[1] for coord in shape) - 1)
+                if self.can_place_object(x, y, shape):
+                    self.place_object(x, y, shape)
+                    # Store object information with unique ID
+                    object_cells = [(x + dx, y + dy) for dx, dy in shape]
+                    self.objects.append({
+                        'id': i,
+                        'cells': object_cells,
+                        'hit_cells': set(),
+                        'size': len(shape)
+                    })
+                    self.total_object_cells += len(shape)
+                    logger.debug(f"Successfully placed object {i} at ({x}, {y})")
+                    break
+
     def click(self, x, y):
         if self.grid[y][x] == 1:
-            self.grid[y][x] = 2  # 2 represents a revealed part of an object
-            return True
-        return False
+            self.grid[y][x] = 2  # Mark as hit
+            
+            destroyed_object = None
+            # Check all objects that contain this cell
+            for obj in self.objects:
+                if (x, y) in obj['cells'] and obj['id'] not in self.destroyed_objects:
+                    obj['hit_cells'].add((x, y))
+                    # Check if this was the last cell needed to destroy this object
+                    if len(obj['hit_cells']) == obj['size']:
+                        logger.debug(f"Object fully destroyed! Size: {obj['size']}")
+                        self.destroyed_objects.add(obj['id'])
+                        destroyed_object = obj
+            
+            return True, destroyed_object['size'] if destroyed_object else 0
+        return False, 0
 
     def all_objects_destroyed(self):
-        destroyed_cells = sum(row.count(2) for row in self.grid)
-        logger.info(f"ALL OBJECTS DESTROYED")
-        return destroyed_cells == self.total_object_cells
-
-    def is_completed(self):
-        return self.all_objects_destroyed()
+        logger.info("Checking if all objects are destroyed...")
+        logger.info(f"Total objects: {len(self.objects)}, Destroyed objects: {len(self.destroyed_objects)}")
+        all_destroyed = len(self.destroyed_objects) == len(self.objects)
+        if all_destroyed:
+            logger.info("ALL OBJECTS DESTROYED")
+        return all_destroyed

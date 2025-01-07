@@ -10,6 +10,7 @@
 }
 
 
+
 /* Star layers */
 .stars, .stars2, .stars3 {
     position: absolute;
@@ -24,7 +25,7 @@
     background-image: radial-gradient(2px 2px at calc(20px + var(--offset-x) * 1px) calc(30px + var(--offset-y) * 1px), #eee, rgba(0,0,0,0)),
                       radial-gradient(2px 2px at calc(40px + var(--offset-x) * 2px) calc(70px + var(--offset-y) * 2px), #fff, rgba(0,0,0,0)),
                       radial-gradient(1px 1px at calc(90px + var(--offset-x) * 3px) calc(40px + var(--offset-y) * 3px), #fff, rgba(0,0,0,0));
-    background-size: 200px 200px;
+    background-size: 50%;
     animation-duration: calc(30s + var(--offset-x) * 0.2s);
 }
 
@@ -76,6 +77,88 @@ body, html {
     align-items: center;
 }
 
+/* Particle CSS */
+.particle-container {
+    position: fixed;  /* Changed from absolute to fixed */
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    z-index: 9999;  /* Very high z-index */
+}
+
+
+.bonus-text {
+    position: absolute;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 24px;
+    transform-origin: center;
+    animation: floatAndFade 1.5s ease-out forwards;
+    text-shadow: 0 0 10px currentColor;
+    z-index: 9999;
+    white-space: nowrap;
+}
+
+.time-bonus {
+    color: #FFD700;
+}
+
+.clicks-bonus {
+    color: #00BFFF;
+    animation-delay: 0.2s;
+}
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: explode 0.8s ease-out forwards;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+}
+
+.time-particle {
+    background: #FFD700;
+    box-shadow: 0 0 12px #FFD700;
+}
+
+.clicks-particle {
+    background: #00BFFF;
+    box-shadow: 0 0 12px #00BFFF;
+}
+
+@keyframes floatAndFade {
+    0% {
+        transform: scale(0) translateY(0);
+        opacity: 0;
+    }
+    20% {
+        transform: scale(1.2) translateY(-10px);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) translateY(-60px);
+        opacity: 0;
+    }
+}
+
+@keyframes explode {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    40% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(
+            calc(-50% + (var(--tx) * 1px)),
+            calc(-50% + (var(--ty) * 1px))
+        ) scale(0);
+        opacity: 0;
+    }
+}
 
 
 
@@ -129,6 +212,7 @@ body, html {
     background-color: #fff;
 }
 
+
 /* Game container layout */
 #game-container {
     display: grid;
@@ -136,13 +220,14 @@ body, html {
     width: 75vw;
     min-height: 600px; /* Minimum height to ensure visibility of all elements */
     min-width: 800px; /* Minimum width to maintain layout */
-    grid-template-columns: 1fr 2fr 1fr;
-    grid-template-rows: auto 1fr auto auto auto;
+    grid-template-columns: 1fr 2fr 0.5fr 0.5fr;
+    grid-template-rows: auto auto 1fr auto auto auto auto;
     gap: 0.5rem;
     padding: 10px;
     box-sizing: border-box;
     border-radius: 10px;
     background-color: rgba(255, 255, 255, .15);
+    transition: box-shadow 0.3s ease;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(5px);
     z-index: 2;
@@ -150,6 +235,7 @@ body, html {
     transform: scale(0.95); /* Slightly scale down the entire container */
     transform-origin: center center;
 }
+
 
 /* Console styles */
 .console {
@@ -193,7 +279,7 @@ body, html {
 /* Mission Objective styles */
 .mission-objective {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 3;
     color: #F2EA0D;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
@@ -201,14 +287,36 @@ body, html {
     overflow-y: auto;
 }
 
+#radar-display {
+    rid-column: 1;
+    grid-row: 6;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    border: 2px solid #00ff00;
+    border-radius: 50%;
+    display: none; /* We'll show this only for the spotter */
+}
+
 /* Grid styles */
 .grid {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 3;
     display: flex;
     justify-content: center;
     align-items: center;
     margin: center;
+}
+
+/* Add glow to the game grid */
+.role-shooter #game-grid {
+    box-shadow: 0 0 15px 5px #FF3B58,
+                inset 0 0 15px 5px #FF3B58;
+}
+
+.role-spotter #game-grid {
+    box-shadow: 0 0 15px 5px #F2EA0D,
+                inset 0 0 15px 5px #F2EA0D;
 }
 
 #game-grid {
@@ -218,7 +326,7 @@ body, html {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 25px;
     border-radius: var(--border-radius);
-
+    transition: box-shadow 0.3s ease;  /* Smooth transition when role changes */
 }
 
 .grid-cell {
@@ -249,24 +357,42 @@ body, html {
 }
 
 .grid-cell.miss {
-    background: linear-gradient(to right, rgba(106, 17, 203, 1), rgba(37, 117, 252, 1))
+    background:  rgba(255, 255, 255, 0.2);
     color: var(--text-color);
 }
 
 /* Player Stats styles */
 #player-stats {
-    grid-column: 3;
-    grid-row: 2;
+    grid-column: 1 / -1;
+    grid-row: 7;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: 10px;
 
 }
 
+#player-role-box {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: center;
+    padding: 10px;
+
+}
+
 /* Game Counters styles */
-.game-counters {
-    grid-column: 1 / -1;
-    grid-row: 4;
+.reaming-clicks {
+    grid-column: 3;
+    grid-row: 2;
+    display: flex;
+    justify-content: space-around;
+    
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.reaming-time {
+    grid-column: 4;
+    grid-row: 2;
     display: flex;
     justify-content: space-around;
     
@@ -313,9 +439,10 @@ body, html {
     white-space: pre-wrap;
 }
 
+
 /* Status message styles */
 .status-info {
-    font-size: 8pt: 
+    font-size: 8pt; 
     color: #FFE23B;
 }
 
@@ -327,14 +454,46 @@ body, html {
     color: #FF3BBA;
 }
 
-/* Responsive design adjustments */
-
-/* Blinking cursor effect for console */
-.console-content::after {
-    content: '█';
-    animation: blink 1s step-end infinite;
+/* Modal styles */
+.end-turn-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
-@keyframes blink {
-    50% { opacity: 0; }
+.modal-content {
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
 }
+
+.modal-content h2 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+}
+
+#next-turn-button {
+    padding: 10px 20px;
+    background-color: var(--text-color);
+    color: var(--main-bg-color);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: background-color 0.3s;
+}
+
+#next-turn-button:hover {
+    background-color: #fff;
+}
+
+

@@ -1,23 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Space Grids Tournament</title>
-    <link rel="stylesheet" href="static/css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
-<body>  
-
+<body>
     <div class="space-background">
         <div class="stars" style="--offset-x: 37; --offset-y: 53;"></div>
         <div class="stars" style="--offset-x: 67; --offset-y: 89;"></div>
         <div class="stars" style="--offset-x: 101; --offset-y: 131;"></div>
         <div class="stars2" style="--offset-x: 7; --offset-y: 31;"></div>
-        <div class="stars2" style="--offset-x: 233; --offset-y: 47;"></div>  
+        <div class="stars2" style="--offset-x: 233; --offset-y: 47;"></div>
         <div class="stars3" style="--offset-x: 59; --offset-y: 333;"></div>
         <div class="stars3" style="--offset-x: 0; --offset-y: 55;"></div>
-
     </div>
 
     <div id="login-form">
@@ -27,30 +23,30 @@
             <input type="text" id="player-name" placeholder="Enter your name" required>
             <button type="submit" id="join-game">Join Game</button>
         </form>
-
     </div>
 
     <div id="game-container" style="display: none;">
         <div class="console">
             <div class="console-header">
-                <span class="console-title">Mission Control</span>
+                <div class="console-title">Mission Control</div>
                 <div class="console-controls">
-                    <span class="control-button"></span>
-                    <span class="control-button"></span>
-                    <span class="control-button"></span>
+                    <div class="control-button"></div>
+                    <div class="control-button"></div>
+                    <div class="control-button"></div>
                 </div>
             </div>
             <div class="console-content">
-                 <div id="game-status-message"></div>
+                <div id="game-status-message"></div>
             </div>
         </div>
 
-        <div class="mission-objective">
+        <div id="player-role-box">
+            Your role: <span id="player-role"></span>
+        </div>
 
+        <div class="mission-objective">
             <h2>Mission Objective</h2>
             <p>Welcome, <span id="player-name-display"></span>!</p>
-            <p>Your role: <span id="player-role"></span></p>
-            
             <div id="objective-section">
                 <p>Current Level: <span id="current-level">1</span></p>
                 <p>Mission: Destroy <span id="num-objects"></span> object(s)</p>
@@ -65,6 +61,14 @@
             <div id="game-grid"></div>
         </div>
 
+        <div class="reaming-clicks">
+            <h2><span id="remaining-clicks"></h2></span>
+        </div>
+
+        <div class="reaming-time">
+            <h2><span id="remaining-time"></h2></span>
+        </div>
+
         <div id="player-stats">
             <h2>Player Stats</h2>
             <p>Turns Played: <span id="turns-played">0</span></p>
@@ -72,15 +76,8 @@
             <p>Total Misses: <span id="total-misses">0</span></p>
             <p>Total Clicks: <span id="total-clicks">0</span></p>
         </div>
-
-        <div class="game-counters">
-            <p>Remaining Clicks: <span id="remaining-clicks">15</span></p>
-            <p>Remaining Time: <span id="remaining-time">15.0</span>s</p>
-        </div>
-
-       
-
-        <button id="next-button" style="display: none;">Next Turn</button>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="static/js/main.js"></script>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

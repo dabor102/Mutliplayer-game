@@ -60,6 +60,10 @@ class GameManager:
             'time_limit': level_config['time_limit'],
             'click_limit': level_config['click_limit']
         }
+
+         # Add this debug line
+        logger.info(f"Grid created with size: {level_config['grid_size']}, objects: {level_config['num_objects']}")
+
         return game_id
 
     def set_level(self, level):
@@ -75,7 +79,6 @@ class GameManager:
     def click(self, game_id, x, y):
         game = self.games[game_id]
         
-        
         # Set start time on first click
         if game['start_time'] is None:
             game['start_time'] = time.time()
@@ -84,13 +87,20 @@ class GameManager:
         if game['shooter_view'][y][x] != 0 or game['spotter_view'][y][x] != 0:
             return False, game['start_time'], False  # Cell already clicked, no change
 
-
-        result = game['grid'].click(x, y)
+        result, destroyed_object_size = game['grid'].click(x, y)
         game['clicks'] += 1
         
         game['shooter_view'][y][x] = 1  # 1 for attempted
         game['spotter_view'][y][x] = 2 if result else 3  # 2 for hit, 3 for miss
 
+        # If an object was completely destroyed, add bonuses
+        if destroyed_object_size > 0:
+            # Add 5 seconds to the timer
+            game['start_time'] += 5
+            # Add bonus clicks equal to the destroyed object's size
+            game['clicks'] -= destroyed_object_size  # Subtract from clicks used to effectively add more
+            logger.info(f"Object destroyed! Added 5 seconds and {destroyed_object_size} clicks")
+        
         # Update consecutive hits and adjust time if necessary
         if result:
             game['consecutive_hits'] += 1
@@ -103,7 +113,7 @@ class GameManager:
         # Check if level is completed
         level_completed = game['grid'].all_objects_destroyed() if result else False
 
-        return result, game['start_time'], level_completed
+        return result, game['start_time'], level_completed, destroyed_object_size
 
     def advance_to_next_level(self, game_id):
         self.current_level += 1

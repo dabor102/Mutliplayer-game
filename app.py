@@ -7,7 +7,14 @@ import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'team_battle'
-socketio = SocketIO(app, async_mode='gevent', logger=True, engineio_logger=True)
+socketio = SocketIO(
+    app,
+    async_mode='gevent',
+    logger=False,  # Disable verbose socket logging
+    engineio_logger=False,  # Disable engine logging
+    ping_timeout=5,  # Reduce ping timeout
+    ping_interval=25000  # Increase ping interval
+)
 
 game_manager = GameManager()
 
@@ -62,7 +69,7 @@ def handle_click(data):
     game_id = data['game_id']
     x, y = data['x'], data['y']
     game = game_manager.games[game_id]
-    result, updated_start_time, all_destroyed = game_manager.click(game_id, x, y)
+    result, updated_start_time, all_destroyed, destroyed_object_size = game_manager.click(game_id, x, y)
 
     level_config = GameConfig.get_level_config(game_manager.current_level)
     remaining_clicks = max(0, level_config['click_limit'] - game['clicks'])
@@ -74,7 +81,8 @@ def handle_click(data):
         'hit': result,
         'remaining_clicks': remaining_clicks,
         'remaining_time': round(remaining_time, 1),
-        'all_destroyed': all_destroyed
+        'all_destroyed': all_destroyed,
+        'destroyed_object_size': destroyed_object_size
     }
 
     for player in game['players']:
@@ -127,6 +135,10 @@ def handle_next_turn(data):
 
     level_config = GameConfig.get_level_config(game_manager.current_level)
 
+    
+    # Remove the modal for both players
+    emit('remove_modal', room=game_id)
+
     for player in game['players']:
         emit('next_turn', {
             'game_id': game_id,
@@ -146,6 +158,14 @@ def handle_next_turn(data):
 
     logger.info(f"Next turn: {game_id}")
 
+
+
 if __name__ == '__main__':
     logger.debug("Starting SocketIO app")
-    socketio.run(app, debug=True)
+    socketio.run(
+        app,
+        debug=False,  # Set to False to improve reload time
+        host='0.0.0.0',
+        port=5001,
+        use_reloader=True  # Enable auto-reloader
+    )

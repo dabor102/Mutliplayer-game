@@ -11,6 +11,64 @@ document.addEventListener('DOMContentLoaded', () => {
     requestGameConfig();
 });
 
+// Particle Generator
+function createParticle(className) {
+    const particle = document.createElement('div');
+    particle.className = `particle ${className}`;
+    
+    // More random initial angles for better spread
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 40 + Math.random() * 80; // Increased velocity range
+    const spread = Math.random() * 0.8 + 0.2; // Adds variation to the explosion radius
+
+    // Calculate trajectory
+    particle.style.setProperty('--tx', Math.cos(angle) * velocity * spread);
+    particle.style.setProperty('--ty', Math.sin(angle) * velocity * spread);
+    
+    return particle;
+}
+
+function createParticleEffect(x, y, timeBonus, clicksBonus) {
+    console.log('Creating particle effect at:', x, y);
+    const container = document.createElement('div');
+    container.className = 'particle-container';
+    container.style.left = x + 'px';
+    container.style.top = y + 'px';
+
+    // Add bonus text with slight offset for better visibility
+    const timeText = document.createElement('div');
+    timeText.className = 'bonus-text time-bonus';
+    timeText.textContent = `+${timeBonus}s`;
+    timeText.style.left = '-30px';
+    timeText.style.top = '-20px';
+
+    const clicksText = document.createElement('div');
+    clicksText.className = 'bonus-text clicks-bonus';
+    clicksText.textContent = `+${clicksBonus} clicks`;
+    clicksText.style.left = '-40px';
+    clicksText.style.top = '10px';
+
+    container.appendChild(timeText);
+    container.appendChild(clicksText);
+
+    // Create more particles for a bigger explosion
+    const particleCount = 30; // Increased from 20
+    for (let i = 0; i < particleCount; i++) {
+        const timeParticle = createParticle('time-particle');
+        const clicksParticle = createParticle('clicks-particle');
+        // Add slight random delay to each particle for more natural explosion
+        timeParticle.style.animationDelay = `${Math.random() * 0.2}s`;
+        clicksParticle.style.animationDelay = `${Math.random() * 0.2 + 0.1}s`;
+        container.appendChild(timeParticle);
+        container.appendChild(clicksParticle);
+    }
+
+    document.body.appendChild(container);
+    
+    // Remove container after animations complete
+    setTimeout(() => container.remove(), 2000);
+}
+
 function setupEventListeners() {
     const loginForm = document.getElementById('login-form-element');
     if (loginForm) {
@@ -26,7 +84,20 @@ function setupEventListeners() {
     socket.on('next_turn', handleNextTurn);
     socket.on('game_completed', handleGameCompleted);
     socket.on('game_config', handleGameConfig);
+    socket.on('remove_modal', handleModalRemove);
+
 }
+
+
+function handleModalRemove() {
+    const modal = document.querySelector('.end-turn-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+    
+
 
 function requestGameConfig() {
     socket.emit('get_game_config');
@@ -59,6 +130,16 @@ function handleWaitingMessage(data) {
     updateGameStatus(data.message, 'info');
 }
 
+function updatePlayerRoleView() {
+    const gameContainer = document.getElementById('game-container');
+    gameContainer.classList.remove('role-shooter', 'role-spotter');
+    if (myRole === 'shooter') {
+        gameContainer.classList.add('role-shooter');
+    } else if (myRole === 'spotter') {
+        gameContainer.classList.add('role-spotter');
+    }
+}
+
 function handleGameStart(data) {
     document.getElementById('game-grid').style.display = 'grid';
     document.getElementById('objective-section').style.display = 'block';
@@ -75,9 +156,14 @@ function handleGameStart(data) {
     // Show the grid
     document.querySelector('.grid').style.display = 'block';
 
+    if (myRole === 'spotter') {
+        initializeRadar();
+    }
+
     resetGameState();
     createGrid();
     updateLevelDisplay(gameConfig.current_level);
+    updatePlayerRoleView()
     enableClicks();
 }
 
@@ -88,44 +174,68 @@ function handleClickResult(data) {
     remainingTime = data.remaining_time;
     updateCounters();
 
-    if (myRole === 'spotter' && isFirstClick) {
+    if (data.destroyed_object_size > 0) {
+        console.log('Object destroyed! Creating particle effect...');
+        // Get the grid cell position
+        const cell = document.querySelector(`[data-x="${data.x}"][data-y="${data.y}"]`);
+        console.log('Cell found:', cell);
+        if (cell) {
+            const rect = cell.getBoundingClientRect();
+            console.log('Cell position:', rect);
+            
+            // Create the particle effect at the cell's position
+            createParticleEffect(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+                5,  // time bonus
+                data.destroyed_object_size  // clicks bonus
+            );
+        }
+    }
+
+
+    if (myRole === 'shooter' && isFirstClick) {
         startTimer();
         isFirstClick = false;
     }
 
+    
+
     if (data.all_destroyed) {
         clearInterval(timerInterval);
         disableClicks();
-        updateGameStatus("All objects destroyed! Click 'Next Level' to advance.", 'success');
-        showNextButton('Next Level');
-    } else {
-        checkRemainingClicks();
-        checkTimeUp();
+        showEndTurnModal("Level Complete!", 'Next Level');
+    } else if (remainingClicks === 0) {
+        endGame('no_clicks');
+    } else if (remainingTime <= 0) {
+        endGame('time_up');
     }
 }
 
 
 function handleNextTurn(data) {
     console.log('Next turn started:', data);
+    
+    // Remove any existing modal
+    handleModalRemove();
+    
     gameConfig = { ...gameConfig, ...data };
     updateObjectiveDisplay(gameConfig.object_shapes, gameConfig.shape_ascii, gameConfig.num_objects);
     myRole = data.your_role;
     document.getElementById('player-role').textContent = myRole;
-    updateGameStatus(`Next turn! Roles swapped`, 'success');
+    updateGameStatus(`Next turn! Your role: ${myRole}`, 'success');
     
-    // Check if the level has changed, indicating level completion
     if (data.current_level > gameConfig.current_level) {
-        statusMessage = `Level Completed! ${statusMessage}`;
+        updateGameStatus(`Level ${data.current_level} started!`, 'success');
     }
 
+    createGrid();
     updateGridFromState(data.grid_view);
     updateStatsDisplay(data.player_stats);
     resetGameState();
-    createGrid();
     updateLevelDisplay(data.current_level);
+    updatePlayerRoleView();
     enableClicks();
-    const nextButton = document.getElementById('next-button');
-    nextButton.style.display = 'none';
 }
 
 function handleLevelCompleted(data) {
@@ -184,6 +294,54 @@ function createGrid() {
     grid.style.gridTemplateColumns = `repeat(${gameConfig.grid_size}, 1fr)`;
 }
 
+let radarCanvas, radarContext, radarInterval;
+const RADAR_SIZE = 200;
+const SWEEP_INTERVAL = 10000; // 10 seconds for a full sweep
+
+function initializeRadar() {
+    if (myRole === 'spotter') {
+        radarCanvas = document.getElementById('radar-display');
+        radarCanvas.style.display = 'block'; // Show radar for spotter
+        radarContext = radarCanvas.getContext('2d');
+        startRadarSweep();
+    }
+}
+
+function startRadarSweep() {
+    let angle = 0;
+    radarInterval = setInterval(() => {
+        drawRadarSweep(angle);
+        angle = (angle + 2) % 360;
+    }, 50); // Update every 50ms for smooth animation
+}
+
+function drawRadarSweep(angle) {
+    radarContext.clearRect(0, 0, RADAR_SIZE, RADAR_SIZE);
+    
+    // Draw radar background
+    radarContext.beginPath();
+    radarContext.arc(RADAR_SIZE/2, RADAR_SIZE/2, RADAR_SIZE/2, 0, Math.PI * 2);
+    radarContext.fillStyle = 'rgba(0, 20, 0, 0.7)';
+    radarContext.fill();
+
+    // Draw sweep line
+    radarContext.beginPath();
+    radarContext.moveTo(RADAR_SIZE/2, RADAR_SIZE/2);
+    radarContext.lineTo(
+        RADAR_SIZE/2 + Math.cos(angle * Math.PI / 180) * RADAR_SIZE/2,
+        RADAR_SIZE/2 + Math.sin(angle * Math.PI / 180) * RADAR_SIZE/2
+    );
+    radarContext.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+    radarContext.stroke();
+
+    // We'll add object detection here in the next step
+}
+
+function stopRadarSweep() {
+    clearInterval(radarInterval);
+}
+
+
 function handleCellClick(event) {
     if (myRole !== 'shooter') {
         console.log('Click ignored:', myRole);
@@ -236,13 +394,12 @@ function endGame(reason) {
 
     let message;
     if (reason === 'time_up') {
-        message = "Time's up! Click 'Next Turn' to continue.";
+        message = "Time's up!";
     } else if (reason === 'no_clicks') {
-        message = "No more clicks remaining! Click 'Next Turn' to continue.";
+        message = "No more clicks remaining!";
     }
 
-    updateGameStatus(message, 'warning');
-    showNextButton('Next Turn');
+    showEndTurnModal(message, 'Next Turn');
 }
 
 
@@ -338,11 +495,23 @@ function enableClicks() {
     }
 }
 
-function showNextButton(text) {
-    const nextButton = document.getElementById('next-button');
-    nextButton.textContent = text;
-    nextButton.style.display = 'block';
-    nextButton.onclick = () => {
-        socket.emit('next_turn', { game_id: gameId, reason: text === 'Next Level' ? 'level_completed' : 'turn_ended' });        
-    };
+// modal for next turn
+
+function showEndTurnModal(message, nextTurnText) {
+    const modal = document.createElement('div');
+    modal.className = 'end-turn-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h2>${message}</h2>
+            ${myRole === 'shooter' ? `<button id="next-turn-button">${nextTurnText}</button>` : '<p>Waiting for shooter to start next turn...</p>'}
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    if (myRole === 'shooter') {
+        document.getElementById('next-turn-button').addEventListener('click', () => {
+            modal.remove();
+            socket.emit('next_turn', { game_id: gameId, reason: message === 'Level Complete!' ? 'level_completed' : 'turn_ended' });
+        });
+    }
 }
