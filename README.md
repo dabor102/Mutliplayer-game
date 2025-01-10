@@ -1,4 +1,4 @@
-# Alien Battleships 🚀
+# Alien Battleships 👾👾👾
 
 A real-time multiplayer browser game that challenges pairs of players to work together as Shooter and Spotter to locate and destroy hidden objects in space. Built with Flask, Socket.IO, and modern web technologies.
 
